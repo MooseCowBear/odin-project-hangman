@@ -122,6 +122,9 @@ class Hangman
   def get_guess 
     guess = nil
     available = unused_letters
+
+    puts "You have #{8 - guessed_letters.length} guesses remaining."
+    
     loop do
       puts "Guess a letter."
 
