@@ -1,4 +1,5 @@
 require 'json'
+require 'time'
 
 class Hangman
   def initialize
@@ -6,7 +7,7 @@ class Hangman
     @board = nil
     @guessed_letters = Array.new #so order of guesses will be preserved
     @guesses = 8
-    @history = load_history #could be class variable since it is shared!
+    @history = load_history 
     @name = nil
   end
 
@@ -26,8 +27,10 @@ class Hangman
       if load[0] == 'y'
         game_choice = nil
 
-        until game.history.keys.include?(game_choice)
-          puts "The options are: #{game.history.keys.join(", ")}" 
+        unfinished = game.get_unfinished_games
+
+        until unfinished.include?(game_choice)
+          puts "The options are: #{unfinished.join(", ")}" 
 
           game_choice = gets.chomp.downcase
         end
@@ -35,7 +38,8 @@ class Hangman
         game.load_game(game_choice)
       end
     end
-    game.display_game_state #want to display the starting state
+
+    game.display_game_state 
 
     game.play_game
   end
@@ -60,14 +64,17 @@ class Hangman
     while guesses > 0 && board.include?("_")
       guess = get_guess
 
-      update_game_state(guess)
+      won = update_game_state(guess)
 
       display_game_state 
+
+      break if won
 
       ask_to_save
     end
 
     display_result
+    save_game(false) 
   end
 
   def display_game_state
@@ -76,6 +83,10 @@ class Hangman
     if guessed_letters.length > 0
       puts "Guessed Letters: #{guessed_letters.join(", ")}"
     end
+  end
+
+  def get_unfinished_games
+    unfinished = history.select { |k, v| v[board].include?("_") }
   end
 
   private
@@ -91,20 +102,20 @@ class Hangman
     end
   end
 
-  def save_game 
-    #ask for name if the game doesn't have one
-    if name.nil?
+  def save_game(ongoing = true) 
+    if name.nil? && ongoing
       puts "Please give your game a name."
 
       self.name = gets.chomp.downcase
+
+    elsif name.nil? #save finished, but previously unsaved games to history - in the event we want to add prizes or something
+      self.name = Time.now.strftime('%s')
     end
 
     self.history[name] = {
       "word" => word, "board" => board, "guessed_letters" => guessed_letters, 
       "guesses" => guesses, "name" => name
     }
-
-    puts "to be written to file: #{history}"
 
     File.write('history.json', JSON.dump(history)) 
   end
@@ -127,7 +138,7 @@ class Hangman
     guess = nil
     available = unused_letters
 
-    puts "You have #{8 - guessed_letters.length} guesses remaining."
+    puts "You have #{guesses} guesses remaining."
 
     loop do
       puts "To make a guess, choose an unused letter or try to guess the word."
@@ -141,29 +152,30 @@ class Hangman
     guess
   end
 
-  def update_game_state(guess) #need to check if guess that is word matches word
-    if guess.length > 1
-      check_word_guess(guess)
-    else
-      check_letter_guess(guess)
-    end
+  def update_game_state(guess)
+    won = guess.length > 1 ? check_word_guess(guess) : check_letter_guess(guess)
   end
 
   def check_word_guess(guess)
     if guess == word
       self.board = word
+      true
     else
       self.guesses -= 1
+      false
     end
   end
 
   def check_letter_guess(guess)
     if word.include?(guess)
-      update_board(guess)
+      update_board(guess) 
+      won = board.include?("_") ? false : true
+      return won
     else
       guessed_letters.push(guess)
       self.guesses -= 1
     end
+    false
   end
 
   def update_board(guess)
