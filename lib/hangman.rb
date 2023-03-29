@@ -5,14 +5,16 @@ class Hangman
     @word = get_word 
     @board = nil
     @guessed_letters = Array.new #so order of guesses will be preserved
-    @history = load_history
+    @guesses = 8
+    @history = load_history #could be class variable since it is shared!
     @name = nil
   end
 
-  attr_accessor :word, :board, :guessed_letters, :history, :name 
+  attr_accessor :word, :board, :guessed_letters, :guesses, :history, :name
 
   def self.play
     game = Hangman.new 
+    puts "word is: #{game.word}" #for debugging
 
     game.set_initial_board
 
@@ -33,7 +35,7 @@ class Hangman
         game.load_game(game_choice)
       end
     end
-    game.display_game_state #display the starting state
+    game.display_game_state #want to display the starting state
 
     game.play_game
   end
@@ -49,11 +51,13 @@ class Hangman
 
     self.guessed_letters = history[name]["guessed_letters"]
 
+    self.guesses = history[name]["guesses"]
+
     self.name = history[name]["name"]
   end
 
   def play_game
-    while guessed_letters.length < 8
+    while guesses > 0 && board.include?("_")
       guess = get_guess
 
       update_game_state(guess)
@@ -88,21 +92,21 @@ class Hangman
   end
 
   def save_game 
-    #ask for name if the game doesn't have one, lowercase it
+    #ask for name if the game doesn't have one
     if name.nil?
       puts "Please give your game a name."
 
       self.name = gets.chomp.downcase
     end
-    #add game to history, then write history to file
+
     self.history[name] = {
       "word" => word, "board" => board, "guessed_letters" => guessed_letters, 
-      "name" => name
+      "guesses" => guesses, "name" => name
     }
 
     puts "to be written to file: #{history}"
 
-    File.write('history.json', JSON.dump(history)) #did not work
+    File.write('history.json', JSON.dump(history)) 
   end
 
   def ask_to_save
@@ -124,41 +128,59 @@ class Hangman
     available = unused_letters
 
     puts "You have #{8 - guessed_letters.length} guesses remaining."
-    
+
     loop do
-      puts "Guess a letter."
+      puts "To make a guess, choose an unused letter or try to guess the word."
 
       puts "Unused letters are: #{available}"
 
       guess = gets.chomp
 
-      break if available.include?(guess)
+      break if available.include?(guess) || guess.length > 1
     end
     guess
   end
 
-  def update_game_state(guess)
+  def update_game_state(guess) #need to check if guess that is word matches word
+    if guess.length > 1
+      check_word_guess(guess)
+    else
+      check_letter_guess(guess)
+    end
+  end
+
+  def check_word_guess(guess)
+    if guess == word
+      self.board = word
+    else
+      self.guesses -= 1
+    end
+  end
+
+  def check_letter_guess(guess)
     if word.include?(guess)
       update_board(guess)
     else
       guessed_letters.push(guess)
+      self.guesses -= 1
     end
   end
 
   def update_board(guess)
     positions = Array.new
+
     word.each_char.with_index do |char, index|
       if char == guess
         positions.push(index)
       end
     end
-    #now have everywhere the guess letter occurs
+    
     positions.each { |i| self.board[i] = guess }
   end
 
   def display_result
     if board.include?("_")
-      puts "You Lost. Word was #{word}"
+      puts "You Lost. Word was #{word}."
     else
       puts "You won!"
     end
