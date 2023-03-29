@@ -53,16 +53,16 @@ class Hangman
     self.board = ''.rjust(word.length, '_')
   end
 
-  def load_game(name)
-    self.word = history[name]["word"]
+  def load_game(input_name)
+    self.word = history[input_name]["word"]
 
-    self.board = history[name]["board"]
+    self.board = history[input_name]["board"]
 
-    self.guessed_letters = history[name]["guessed_letters"]
+    self.guessed_letters = history[input_name]["guessed_letters"]
 
-    self.guesses = history[name]["guesses"]
+    self.guesses = history[input_name]["guesses"]
 
-    self.name = history[name]["name"]
+    self.name = input_name
   end
 
   def play_game
@@ -119,7 +119,7 @@ class Hangman
 
     self.history[name] = {
       "word" => word, "board" => board, "guessed_letters" => guessed_letters, 
-      "guesses" => guesses, "name" => name
+      "guesses" => guesses
     }
 
     File.write('history.json', JSON.dump(history)) 
