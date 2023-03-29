@@ -15,27 +15,32 @@ class Hangman
 
   def self.play
     game = Hangman.new 
-    puts "word is: #{game.word}" #for debugging
 
     game.set_initial_board
 
-    unless game.history.empty?
-      puts "Would you like to load a saved game? y/n"
+    unfinished = game.get_unfinished_games
 
-      load = gets.chomp
+    unless unfinished.empty?
+      loop do
+        puts "Would you like to load a saved game? y/n"
 
-      if load[0] == 'y'
-        game_choice = nil
+        load = gets.chomp.downcase
 
-        unfinished = game.get_unfinished_games
+        if load == 'y' || load == 'yes'
+          game_choice = nil
 
-        until unfinished.include?(game_choice)
-          puts "The options are: #{unfinished.join(", ")}" 
+          until unfinished.include?(game_choice)
+            puts "The options are: #{unfinished.keys.join(", ")}" 
 
-          game_choice = gets.chomp.downcase
+            game_choice = gets.chomp.downcase
+          end
+
+          game.load_game(game_choice)
+          break
+
+        elsif load == 'n' || load == 'no'
+          break
         end
-
-        game.load_game(game_choice)
       end
     end
 
@@ -86,7 +91,7 @@ class Hangman
   end
 
   def get_unfinished_games
-    unfinished = history.select { |k, v| v[board].include?("_") }
+    unfinished = history.select { |k, v| v["board"].include?("_") }
   end
 
   private
@@ -121,12 +126,17 @@ class Hangman
   end
 
   def ask_to_save
-    puts "Would you like to save this game? y/n"
+    loop do
+      puts "Would you like to save this game? y/n"
 
-    save = gets.chomp
+      save = gets.chomp.downcase
 
-    if save[0] == 'y'
-      save_game
+      if save == 'y' || save == 'yes'
+        save_game
+        break
+      elsif save =='n' || save == 'no'
+        break
+      end
     end
   end
 
